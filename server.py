@@ -1,8 +1,13 @@
 from socket import AF_INET, socket, SOCK_STREAM
+import shared_curve
+from Point import Point
 from threading import Thread
 
 clients = {}
 addresses = {}
+shared_key= {}
+
+pri, pub = shared_curve.curve.gen_key_pair()
 
 HOST = ''
 PORT = 33000
@@ -11,11 +16,28 @@ ADDR = (HOST, PORT)
 SERVER = socket(AF_INET, SOCK_STREAM)
 SERVER.bind(ADDR)
 
+def secret_share(client):
+    """Secret sharing"""
+    global shared_key
+    msg = str(pub.X) + '|' + str(pub.Y)
+    client.send(bytes(msg, "utf8"))
+
+    try:
+        msg = client.recv(BUFSIZ).decode("utf8").split('|')
+    except OSError:  # Possibly client has left the chat.
+        pass
+
+    partial_key = Point(int(msg[0]),int(msg[1]))
+    shared_key[client] = shared_curve.curve.gen_shared_key(pri,partial_key)
+
+    print("Shared Key :",shared_key[client].X, shared_key[client].Y)
+
 def accept_incoming_connections():
     """Sets up handling for incoming clients."""
     while True:
         client, client_address = SERVER.accept()
         print("%s:%s has connected." % client_address)
+        secret_share(client)
         client.send(bytes("Greetings from the cave! "+
                           "Now type your name and press enter!\n", "utf8"))
         addresses[client] = client_address
@@ -38,6 +60,7 @@ def handle_client(client):  # Takes client socket as argument.
             client.send(bytes("{quit}", "utf8"))
             client.close()
             del clients[client]
+            del shared_key[client]
             broadcast(bytes("%s has left the chat." % name, "utf8"))
             break
 
