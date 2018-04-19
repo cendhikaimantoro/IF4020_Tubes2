@@ -1,52 +1,81 @@
 #!/usr/bin/python3
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
+from pprint import pprint
+from block_cipher.cipher import BerezCipher
+import sys
 
 clients = {}
 addresses = {}
-
+keys = {}
 HOST = ''
-PORT = 33000
+if (len(sys.argv) == 2):
+    PORT = int(sys.argv[1])
+else:
+    PORT = 33000
 BUFSIZ = 1024
 ADDR = (HOST, PORT)
 SERVER = socket(AF_INET, SOCK_STREAM)
 SERVER.bind(ADDR)
+MODE = "CBC"
+
+# MSG is string
+def send_encrypted(client_socket, msg, key):
+    cipher = BerezCipher(message=msg.encode('utf-8'), key = key, fromFile=False)
+    ciphertext = cipher.generate_cipher(decrypt = False, mode = MODE)
+    print("send_encrypted", key, ciphertext)
+    client_socket.send(ciphertext)
+
+def recv_encrypted(client_socket, key):
+    msg = client_socket.recv(BUFSIZ)
+    print("recv_encrypted", key, msg)
+
+    cipher = BerezCipher(message=msg, key = key, fromFile=False)
+    plaintext = cipher.generate_cipher(decrypt = True, mode = MODE)
+    return plaintext.decode('utf-8').rstrip(' \t\r\n\0')
+
 
 def accept_incoming_connections():
     """Sets up handling for incoming clients."""
     while True:
         client, client_address = SERVER.accept()
         print("%s:%s has connected." % client_address)
-        client.send(bytes("Greetings from the cave! "+
-                          "Now type your name and press enter!\n", "utf8"))
+        # HANDSHAKE disini
+        keys[client] = "123"
         addresses[client] = client_address
+        send_encrypted(client, "Greetings from the cave! \n Now type your name and press enter!\n",
+                        keys[client])
+
         Thread(target=handle_client, args=(client,)).start()
 
 
 def handle_client(client):  # Takes client socket as argument.
     """Handles a single client connection."""
-    name = client.recv(BUFSIZ).decode("utf8")
-    welcome = 'Welcome %s! If you ever want to quit, type {quit} to exit.\n' % name
-    client.send(bytes(welcome, "utf8"))
-    msg = "%s has joined the chat!" % name
-    broadcast(bytes(msg, "utf8"))
+    name = recv_encrypted(client, keys[client])
     clients[client] = name
+    welcome = 'Welcome %s! If you ever want to quit, type {quit} to exit.\n' % name
+    send_encrypted(client, welcome, keys[client])
+
+    msg = "%s has joined the chat!" % name
+    broadcast(msg)
+
     while True:
-        msg = client.recv(BUFSIZ)
-        if msg != bytes("{quit}", "utf8"):
+        msg = recv_encrypted(client, keys[client])
+        if msg != "{quit}":
             broadcast(msg, name+": ")
         else:
-            client.send(bytes("{quit}", "utf8"))
             client.close()
             del clients[client]
-            broadcast(bytes("%s has left the chat." % name, "utf8"))
+            msg = "%s has left the chat." % name
+            broadcast(msg)
             break
 
 
 def broadcast(msg, prefix=""):  # prefix is for name identification.
     """Broadcasts a message to all the clients."""
     for sock in clients:
-        sock.send(bytes(prefix, "utf8") + msg)
+        # encrypt
+        send_encrypted(sock, prefix + msg, keys[sock])
 
 
 if __name__ == "__main__":
