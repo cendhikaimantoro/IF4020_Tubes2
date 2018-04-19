@@ -1,9 +1,10 @@
+#!/usr/bin/python3
 import math
 import sys
 import pickle
 import random
-from Point import Point
-
+from .Point import Point
+# from Point import Point
 
 class EllipticCurve:
     """

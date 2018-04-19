@@ -1,8 +1,11 @@
+#!/usr/bin/python3
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 from Point import Point
 import tkinter
 import shared_curve
+
+client_socket = socket(AF_INET, SOCK_STREAM)
 
 def receive():
     """Handles receiving of messages."""
