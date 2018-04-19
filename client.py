@@ -2,7 +2,9 @@
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 from block_cipher.cipher import BerezCipher
+from ecc.Point import Point
 import tkinter
+import shared_curve
 import sys
 
 client_socket = socket(AF_INET, SOCK_STREAM)
@@ -32,7 +34,6 @@ def receive():
         except OSError:  # Possibly client has left the chat.
             break
 
-
 def send(event=None):  # event is passed by binders.
     """Handles sending of messages."""
     msg = my_msg.get()
@@ -44,6 +45,20 @@ def send(event=None):  # event is passed by binders.
         client_socket.close()
         top.quit()
 
+def secret_share():
+    """Secret sharing"""
+    global shared_key
+    msg = str(pub.X) + '|' + str(pub.Y)
+    client_socket.send(bytes(msg, "utf8"))
+
+    try:
+        msg = client_socket.recv(BUFSIZ).decode("utf8").split('|')
+    except OSError:  # Possibly client has left the chat.
+        pass
+
+    partial_key = Point(int(msg[0]),int(msg[1]))
+    shared_key = shared_curve.curve.gen_shared_key(pri,partial_key)
+    print("Shared Key :", shared_key.X, shared_key.Y)
 
 def on_closing(event=None):
     """This function is to be called when the window is closed."""
@@ -83,7 +98,10 @@ ADDR = (HOST, PORT)
 client_socket = socket(AF_INET, SOCK_STREAM)
 client_socket.connect(ADDR)
 
-# handshake disini kayaknya
+#----Key Sharing----
+pri, pub = shared_curve.curve.gen_key_pair()
+shared_key = Point(0,0)
+secret_share()
 
 KEY = "123"
 receive_thread = Thread(target=receive)
