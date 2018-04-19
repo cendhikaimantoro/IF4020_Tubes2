@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
-from Point import Point
+from ecc.Point import Point
 import tkinter
 import shared_curve
 

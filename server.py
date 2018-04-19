@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 from socket import AF_INET, socket, SOCK_STREAM
 import shared_curve
-from Point import Point
+from ecc.Point import Point
 from threading import Thread
 
 clients = {}
