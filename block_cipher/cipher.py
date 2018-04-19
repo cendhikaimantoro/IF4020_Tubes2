@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 from collections import deque
 from pprint import pprint
-import sbox
+from . import sbox
+# import block_cipher.sbox as sbox
 import hashlib
 import random
 import numpy as np
