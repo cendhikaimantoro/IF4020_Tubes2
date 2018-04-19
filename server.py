@@ -54,7 +54,6 @@ def secret_share(client):
 
     partial_key = Point(int(msg[0]),int(msg[1]))
     shared_key[client] = shared_curve.curve.gen_shared_key(pri,partial_key)
-
     print("Shared Key :",shared_key[client].X, shared_key[client].Y)
 
 def accept_incoming_connections():
@@ -63,29 +62,27 @@ def accept_incoming_connections():
         client, client_address = SERVER.accept()
         print("%s:%s has connected." % client_address)
         secret_share(client)
-        client.send(bytes("Greetings from the cave! "+
-                          "Now type your name and press enter!\n", "utf8"))
         # HANDSHAKE disini
         keys[client] = "123"
         addresses[client] = client_address
         send_encrypted(client, "Greetings from the cave! \n Now type your name and press enter!\n",
-                        keys[client])
+                        str(shared_key[client]))
 
         Thread(target=handle_client, args=(client,)).start()
 
 
 def handle_client(client):  # Takes client socket as argument.
     """Handles a single client connection."""
-    name = recv_encrypted(client, keys[client])
+    name = recv_encrypted(client, str(shared_key[client]))
     clients[client] = name
     welcome = 'Welcome %s! If you ever want to quit, type {quit} to exit.\n' % name
-    send_encrypted(client, welcome, keys[client])
+    send_encrypted(client, welcome, str(shared_key[client]))
 
     msg = "%s has joined the chat!" % name
     broadcast(msg)
 
     while True:
-        msg = recv_encrypted(client, keys[client])
+        msg = recv_encrypted(client, str(shared_key[client]))
         if msg != "{quit}":
             broadcast(msg, name+": ")
         else:
@@ -100,7 +97,7 @@ def broadcast(msg, prefix=""):  # prefix is for name identification.
     """Broadcasts a message to all the clients."""
     for sock in clients:
         # encrypt
-        send_encrypted(sock, prefix + msg, keys[sock])
+        send_encrypted(sock, prefix + msg, str(shared_key[sock]))
 
 
 if __name__ == "__main__":

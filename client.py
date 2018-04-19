@@ -12,15 +12,15 @@ KEY = ""
 MODE = "CBC"
 
 def send_encrypted(msg):
-    cipher = BerezCipher(message=msg.encode('utf-8'), key = KEY, fromFile=False)
+    cipher = BerezCipher(message=msg.encode('utf-8'), key = str(shared_key), fromFile=False)
     ciphertext = cipher.generate_cipher(decrypt = False, mode = MODE)
-    print("send_encrypted", KEY, ciphertext)
+    print("send_encrypted", shared_key, ciphertext)
     client_socket.send(ciphertext)
 
 def recv_encrypted():
     msg = client_socket.recv(BUFSIZ)
-    print("recv_encrypted", KEY, msg)
-    cipher = BerezCipher(message=msg, key = KEY, fromFile=False)
+    print("recv_encrypted", shared_key, msg)
+    cipher = BerezCipher(message=msg, key = str(shared_key), fromFile=False)
     plaintext = cipher.generate_cipher(decrypt = True, mode = MODE)
     return plaintext.decode('utf-8').rstrip(' \t\r\n\0')
 
@@ -70,7 +70,6 @@ top.title("Chatter")
 
 messages_frame = tkinter.Frame(top)
 my_msg = tkinter.StringVar()  # For the messages to be sent.
-my_msg.set("Type your messages here.")
 scrollbar = tkinter.Scrollbar(messages_frame)  # To navigate through past messages.
 
 # Following will contain the messages.
@@ -101,6 +100,7 @@ client_socket.connect(ADDR)
 #----Key Sharing----
 pri, pub = shared_curve.curve.gen_key_pair()
 shared_key = Point(0,0)
+print(shared_key)
 secret_share()
 
 KEY = "123"
